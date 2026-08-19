@@ -1,0 +1,13 @@
+services:
+  worker:
+    build:
+      context: ./apps/worker
+      dockerfile: Dockerfile.cpu
+    ports:
+      - "8000:8000"
+    environment:
+      PIPELINE_MODE: cpu
+      CALLBACK_SECRET: ${WORKER_CALLBACK_SECRET:-change-me-to-a-long-random-string}
+    volumes:
+      - ./apps/worker:/app
+      - ./data/audio:/data/audio

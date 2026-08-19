@@ -1,0 +1,14 @@
+{
+  "name": "hayl-ai",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w web",
+    "lint": "npm run lint -w web",
+    "worker:install": "python3 -m venv apps/worker/.venv && apps/worker/.venv/bin/pip install -U pip && apps/worker/.venv/bin/pip install -r apps/worker/requirements.txt",
+    "worker": "cd apps/worker && PIPELINE_MODE=cpu .venv/bin/uvicorn main:app --reload --host 127.0.0.1 --port 8000"
+  }
+}
