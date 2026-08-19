@@ -1,3 +1,6 @@
+# RunPod GitHub deploy uses the repository root as build context.
+# Prefer this file in the UI (Dockerfile path: Dockerfile) if apps/worker/Dockerfile fails COPY.
+
 FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -12,13 +15,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY requirements.txt requirements-gpu.txt ./
+COPY apps/worker/requirements.txt apps/worker/requirements-gpu.txt ./
 RUN python3.11 -m pip install --no-cache-dir --upgrade pip \
     && python3.11 -m pip install --no-cache-dir \
         torch==2.5.1 torchaudio==2.5.1 \
         --index-url https://download.pytorch.org/whl/cu121 \
     && python3.11 -m pip install --no-cache-dir -r requirements-gpu.txt
 
-COPY . .
+COPY apps/worker/ .
 
 CMD ["python3.11", "-u", "rp_handler.py"]
