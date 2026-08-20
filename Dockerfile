@@ -23,5 +23,6 @@ RUN python3.11 -m pip install --no-cache-dir --upgrade pip \
     && python3.11 -m pip install --no-cache-dir -r requirements-gpu.txt
 
 COPY apps/worker/ .
+COPY rp_handler.py /app/rp_handler.py
 
 CMD ["python3.11", "-u", "rp_handler.py"]
