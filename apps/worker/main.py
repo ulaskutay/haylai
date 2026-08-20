@@ -13,13 +13,16 @@ app = FastAPI(title="HAYL AI Audio Worker", version="0.1.0")
 
 class JobRequest(BaseModel):
     song_id: str
-    original_url: str
-    instrumental_url: str
+    original_url: str = ""
+    instrumental_url: str = ""
     upload_url: str
     genre: str = "pop"
     instruments: str = ""
     rhythm: str = "follow"
     bpm: float = 0
+    groove: str = ""
+    task: str = "song"
+    lock_bed: bool = False
     callback_url: str = ""
     callback_secret: str = Field(default="")
 

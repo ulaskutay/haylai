@@ -7,17 +7,31 @@ from tempfile import TemporaryDirectory
 import numpy as np
 
 from pipeline.audio import download, load_mono, to_wav, upload_bytes, write_wav
-from pipeline.bed import finish_production, parse_instruments, render_sub_layer, write_bed
+from pipeline.bed import (
+    finish_production,
+    parse_instruments,
+    render_sub_layer,
+    resolve_groove,
+    write_bed,
+)
 from pipeline.callback import notify
 from pipeline.clean import clean
 from pipeline.enhance import enhance
 from pipeline.rvc import convert as rvc_convert
 from pipeline.export import export_mp3
 from pipeline.mix import mix
-from pipeline.bed_ai import ml_bed_enabled, prefer_ml_on_gpu, try_generate_bed
+from pipeline.bed_ai import prefer_ml_on_gpu, try_generate_bed
 from pipeline.pitch import correct_pitch
 from pipeline.rhythm import analyze_rhythm
 from pipeline.types import STEPS, JobPayload
+
+LOOP_BARS = 8
+LOOP_SR = 44100
+
+
+def loop_sample_count(bpm: float, bars: int = LOOP_BARS, sr: int = LOOP_SR) -> int:
+    tempo = bpm if bpm and bpm >= 40 else 92.0
+    return int(round(bars * 4.0 * (60.0 / tempo) * sr))
 
 
 def _loop_bed(src: Path, n: int, sr: int) -> Path:
@@ -79,18 +93,84 @@ def _produce_catalog(
     sr: int,
     bpm: float | None,
     genre: str,
+    groove: str | None = None,
 ) -> Path:
     aligned = _align_loop_bed(src, vocal, n, sr, bpm=bpm)
     bed, _ = load_mono(aligned, sr=sr)
     if genre in {"pop", "trap"} and bpm and bpm >= 40:
-        sub = render_sub_layer(genre, len(bed), sr, bpm, offset=0)
+        sub = render_sub_layer(genre, len(bed), sr, bpm, offset=0, groove=groove)
         bed = np.clip(bed.astype(np.float32) + sub * 0.55, -1.0, 1.0)
     produced = finish_production(bed, sr, genre, vocal)
     dest = src.parent / "bed-produced.wav"
     return write_wav(dest, produced, sr)
 
 
+def _lock_bed(
+    src: Path,
+    vocal: np.ndarray,
+    n: int,
+    sr: int,
+    genre: str,
+) -> Path:
+    looped = _loop_bed(src, n, sr)
+    bed, _ = load_mono(looped, sr=sr)
+    produced = finish_production(bed, sr, genre, vocal)
+    dest = src.parent / "bed-locked.wav"
+    return write_wav(dest, produced, sr)
+
+
+def run_bed_loop(payload: JobPayload) -> dict:
+    instruments = parse_instruments(payload.instruments, payload.genre)
+    pattern = resolve_groove(payload.genre, payload.groove)
+    bpm = payload.bpm if payload.bpm >= 40 else float(pattern["bpm"])
+    n = loop_sample_count(bpm)
+    with TemporaryDirectory(prefix="hayl-bed-") as tmp:
+        workdir = Path(tmp)
+        dest = workdir / "loop.wav"
+        source = "procedural"
+        ml_bed, ml_engine = try_generate_bed(
+            dest,
+            payload.genre,
+            instruments,
+            n,
+            LOOP_SR,
+            bpm,
+            vocal=None,
+            groove=payload.groove,
+        )
+        if ml_bed:
+            dest = ml_bed
+            source = ml_engine or "ml"
+        else:
+            write_bed(
+                dest,
+                payload.genre,
+                instruments,
+                n,
+                LOOP_SR,
+                bpm=bpm,
+                offset=0,
+                ambient=False,
+                vocal=None,
+                groove=payload.groove,
+            )
+            source = "procedural"
+        wav_bytes = dest.read_bytes()
+        upload_bytes(payload.upload_url, wav_bytes, "audio/wav")
+        return {
+            "ok": True,
+            "song_id": payload.song_id,
+            "task": "bed_loop",
+            "source": source,
+            "bpm": bpm,
+            "bars": LOOP_BARS,
+            "bytes": len(wav_bytes),
+        }
+
+
 def run_job(payload: JobPayload) -> dict:
+    if (payload.task or "song") == "bed_loop":
+        return run_bed_loop(payload)
     def report(step: str, status: str = "processing", extra: dict | None = None) -> None:
         body = {
             "song_id": payload.song_id,
@@ -124,33 +204,43 @@ def run_job(payload: JobPayload) -> dict:
             bed_path = workdir / "bed.wav"
             bed_source = "procedural"
 
-            ml_bed, ml_engine = try_generate_bed(
-                bed_path,
-                payload.genre,
-                instruments,
-                len(vocal),
-                sr,
-                rhythm.bpm,
-                vocal,
-            )
-            if ml_bed:
-                bed_path = ml_bed
-                bed_source = ml_engine or "ml"
-            elif payload.instrumental_url and not prefer_ml_on_gpu():
-                try:
-                    bed_raw = download(payload.instrumental_url, workdir / "bed.bin")
-                    catalog = to_wav(bed_raw, workdir / "catalog.wav")
-                    bed_path = _produce_catalog(
-                        catalog,
-                        vocal,
-                        len(vocal),
-                        sr,
-                        bpm=rhythm.bpm,
-                        genre=payload.genre,
-                    )
-                    bed_source = "catalog"
-                except Exception:
-                    pass
+            if payload.lock_bed:
+                if not payload.instrumental_url:
+                    raise RuntimeError("lock_bed requires instrumental_url")
+                bed_raw = download(payload.instrumental_url, workdir / "bed.bin")
+                locked = to_wav(bed_raw, workdir / "locked-src.wav")
+                bed_path = _lock_bed(locked, vocal, len(vocal), sr, payload.genre)
+                bed_source = "locked"
+            else:
+                ml_bed, ml_engine = try_generate_bed(
+                    bed_path,
+                    payload.genre,
+                    instruments,
+                    len(vocal),
+                    sr,
+                    rhythm.bpm,
+                    vocal,
+                    groove=payload.groove,
+                )
+                if ml_bed:
+                    bed_path = ml_bed
+                    bed_source = ml_engine or "ml"
+                elif payload.instrumental_url and not prefer_ml_on_gpu():
+                    try:
+                        bed_raw = download(payload.instrumental_url, workdir / "bed.bin")
+                        catalog = to_wav(bed_raw, workdir / "catalog.wav")
+                        bed_path = _produce_catalog(
+                            catalog,
+                            vocal,
+                            len(vocal),
+                            sr,
+                            bpm=rhythm.bpm,
+                            genre=payload.genre,
+                            groove=payload.groove,
+                        )
+                        bed_source = "catalog"
+                    except Exception:
+                        pass
 
             if bed_source == "procedural":
                 write_bed(
@@ -163,6 +253,7 @@ def run_job(payload: JobPayload) -> dict:
                     offset=rhythm.offset,
                     ambient=rhythm.ambient,
                     vocal=vocal,
+                    groove=payload.groove,
                 )
             time.sleep(0.05)
 

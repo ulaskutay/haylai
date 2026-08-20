@@ -70,6 +70,7 @@ def _local_path(url: str) -> Path | None:
 
 def _public_headers(url: str, extra: dict | None = None) -> dict[str, str]:
     headers = dict(extra or {})
+    headers.setdefault("User-Agent", "HaylWorker/1.0")
     if "ngrok" in url:
         headers["ngrok-skip-browser-warning"] = "1"
     return headers
@@ -77,6 +78,11 @@ def _public_headers(url: str, extra: dict | None = None) -> dict[str, str]:
 
 def download(url: str, dest: Path) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
+    url = (url or "").strip()
+    if not url:
+        raise RuntimeError("empty download url")
+    if not url.startswith(("http://", "https://", "local://")):
+        raise RuntimeError(f"invalid download url: {url[:80]!r}")
     local = _local_path(url)
     if local:
         dest.write_bytes(local.read_bytes())
@@ -89,6 +95,11 @@ def download(url: str, dest: Path) -> Path:
 
 
 def upload_bytes(url: str, data: bytes, content_type: str = "audio/mpeg") -> None:
+    url = (url or "").strip()
+    if not url:
+        raise RuntimeError("empty upload url")
+    if not url.startswith(("http://", "https://", "local://")):
+        raise RuntimeError(f"invalid upload url: {url[:80]!r}")
     local = _local_path(url)
     if local:
         local.parent.mkdir(parents=True, exist_ok=True)

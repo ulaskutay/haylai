@@ -16,7 +16,7 @@ try:
     import runpod
     from pipeline.audio import use_gpu_models
     from pipeline.bed_ai import ml_bed_enabled, warmup
-    from pipeline.job import run_job
+    from pipeline.job import run_bed_loop, run_job
     from pipeline.types import JobPayload
 except Exception:
     traceback.print_exc()
@@ -40,7 +40,9 @@ def _warmup_models() -> None:
 def handler(event):
     inp = event.get("input") or event
     try:
-        payload = JobPayload.from_dict(inp)
+        payload = JobPayload.from_dict(inp if isinstance(inp, dict) else {})
+        if payload.task == "bed_loop":
+            return run_bed_loop(payload)
         return run_job(payload)
     except Exception as exc:
         traceback.print_exc()

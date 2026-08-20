@@ -14,7 +14,7 @@ STYLES: dict[str, dict] = {
         "chords": (0, 8, 3, 10),
         "swing": 0.0,
         "profile": "urban",
-        "default": ("drums", "bass", "keys", "pad"),
+        "default": ("drums", "bass", "keys", "pad", "perc"),
     },
     "trap": {
         "bpm": 140,
@@ -22,7 +22,7 @@ STYLES: dict[str, dict] = {
         "scale": (0, 2, 3, 5, 7, 8, 10),
         "chords": (0, 8, 5, 10),
         "swing": 0.06,
-        "default": ("drums", "bass", "synth", "pad"),
+        "default": ("drums", "bass", "synth", "pad", "perc"),
     },
     "rock": {
         "bpm": 118,
@@ -50,8 +50,203 @@ STYLES: dict[str, dict] = {
     },
 }
 
-ALLOWED = ("drums", "bass", "keys", "guitar", "pad", "synth", "strings")
+ALLOWED = ("drums", "bass", "keys", "guitar", "pad", "synth", "strings", "perc", "brass")
 BEAT_GENRES = frozenset({"pop", "trap", "rock"})
+
+# Keep in sync with apps/web/src/lib/arrangement.ts GROOVES
+GROOVES: dict[str, dict] = {
+    "pop-four": {
+        "genre": "pop",
+        "bpm": 92,
+        "kick": (0, 8),
+        "snare": (4, 12),
+        "hat": "8th",
+        "open_hat": (),
+        "clap": True,
+        "tom": (),
+        "swing": 0.0,
+    },
+    "pop-sync": {
+        "genre": "pop",
+        "bpm": 96,
+        "kick": (0, 3, 8, 10),
+        "snare": (4, 12),
+        "hat": "8th",
+        "open_hat": (7, 15),
+        "clap": True,
+        "tom": (),
+        "swing": 0.04,
+    },
+    "pop-clap": {
+        "genre": "pop",
+        "bpm": 90,
+        "kick": (0, 8, 11),
+        "snare": (4, 12),
+        "hat": "quarter",
+        "open_hat": (6, 14),
+        "clap": True,
+        "tom": (),
+        "swing": 0.0,
+    },
+    "trap-roll": {
+        "genre": "trap",
+        "bpm": 140,
+        "kick": (0, 6, 10),
+        "snare": (4, 12),
+        "hat": "16th",
+        "open_hat": (7, 15),
+        "clap": True,
+        "tom": (),
+        "swing": 0.06,
+    },
+    "trap-drill": {
+        "genre": "trap",
+        "bpm": 144,
+        "kick": (0, 7, 11),
+        "snare": (4, 12),
+        "hat": "16th",
+        "open_hat": (5, 13),
+        "clap": True,
+        "tom": (),
+        "swing": 0.08,
+    },
+    "trap-bounce": {
+        "genre": "trap",
+        "bpm": 136,
+        "kick": (0, 4, 7, 11),
+        "snare": (4, 12),
+        "hat": "8th",
+        "open_hat": (7, 15),
+        "clap": True,
+        "tom": (),
+        "swing": 0.04,
+    },
+    "rock-four": {
+        "genre": "rock",
+        "bpm": 118,
+        "kick": (0, 4, 8, 12),
+        "snare": (4, 12),
+        "hat": "8th",
+        "open_hat": (),
+        "clap": False,
+        "tom": (),
+        "swing": 0.0,
+    },
+    "rock-drive": {
+        "genre": "rock",
+        "bpm": 124,
+        "kick": (0, 4, 8, 12),
+        "snare": (4, 12),
+        "hat": "8th",
+        "open_hat": (7, 15),
+        "clap": False,
+        "tom": (2, 6, 10, 14),
+        "swing": 0.0,
+    },
+    "rock-half": {
+        "genre": "rock",
+        "bpm": 112,
+        "kick": (0, 8),
+        "snare": (8,),
+        "hat": "8th",
+        "open_hat": (),
+        "clap": False,
+        "tom": (12, 14),
+        "swing": 0.0,
+    },
+    "lofi-boom": {
+        "genre": "lofi",
+        "bpm": 84,
+        "kick": (0, 10),
+        "snare": (4, 12),
+        "hat": "offbeat",
+        "open_hat": (7,),
+        "clap": False,
+        "tom": (),
+        "swing": 0.14,
+    },
+    "lofi-dust": {
+        "genre": "lofi",
+        "bpm": 78,
+        "kick": (0, 8),
+        "snare": (4, 12),
+        "hat": "8th",
+        "open_hat": (),
+        "clap": False,
+        "tom": (),
+        "swing": 0.12,
+    },
+    "lofi-soft": {
+        "genre": "lofi",
+        "bpm": 72,
+        "kick": (0,),
+        "snare": (8,),
+        "hat": "quarter",
+        "open_hat": (),
+        "clap": False,
+        "tom": (),
+        "swing": 0.1,
+    },
+    "slow-pulse": {
+        "genre": "slow",
+        "bpm": 68,
+        "kick": (0, 8),
+        "snare": (4, 12),
+        "hat": "quarter",
+        "open_hat": (),
+        "clap": False,
+        "tom": (),
+        "swing": 0.04,
+    },
+    "slow-side": {
+        "genre": "slow",
+        "bpm": 62,
+        "kick": (0,),
+        "snare": (8,),
+        "hat": "quarter",
+        "open_hat": (14,),
+        "clap": False,
+        "tom": (),
+        "swing": 0.06,
+    },
+    "slow-heart": {
+        "genre": "slow",
+        "bpm": 72,
+        "kick": (0, 6, 8, 14),
+        "snare": (8,),
+        "hat": "8th",
+        "open_hat": (),
+        "clap": True,
+        "tom": (),
+        "swing": 0.05,
+    },
+}
+
+DEFAULT_GROOVE = {
+    "pop": "pop-four",
+    "trap": "trap-roll",
+    "rock": "rock-four",
+    "lofi": "lofi-boom",
+    "slow": "slow-pulse",
+}
+
+
+def resolve_groove(genre: str, groove_id: str | None = None) -> dict:
+    style_id = genre if genre in STYLES else "pop"
+    picked = GROOVES.get((groove_id or "").strip())
+    if picked and picked["genre"] == style_id:
+        return picked
+    return GROOVES[DEFAULT_GROOVE.get(style_id, "pop-four")]
+
+
+def _hat_hit(mode: str, bar_pos: int) -> bool:
+    if mode == "16th":
+        return True
+    if mode == "8th":
+        return bar_pos % 2 == 0
+    if mode == "offbeat":
+        return bar_pos % 2 == 1
+    return bar_pos % 4 == 0
 
 
 def _midi_hz(midi: float) -> float:
@@ -205,15 +400,17 @@ def render_sub_layer(
     sr: int,
     bpm: float,
     offset: int = 0,
+    groove: str | None = None,
 ) -> np.ndarray:
     """808 + kick grid to reinforce catalog loops toward urban production weight."""
     style = STYLES.get(genre, STYLES["pop"])
+    pattern = resolve_groove(genre, groove)
     root = int(style["root"])
     chords = style["chords"]
     step = 60.0 / bpm / 4.0
     layer = np.zeros(n, dtype=np.float32)
     kick = _kick(sr)
-    sub = _sub808(sr, root - 24)
+    kick_hits = set(pattern["kick"])
     i = 0
     while True:
         at = int(i * step * sr) + offset
@@ -222,7 +419,7 @@ def render_sub_layer(
         bar_pos = i % 16
         chord_root = root + int(chords[(i // 16) % len(chords)])
         sub_note = _sub808(sr, chord_root - 24)
-        if bar_pos in {0, 8}:
+        if bar_pos in kick_hits:
             _place(layer, kick, at, 0.55)
             _place(layer, sub_note, at, 0.85)
         i += 1
@@ -253,13 +450,15 @@ def render_bed(
     offset: int = 0,
     ambient: bool = False,
     vocal: np.ndarray | None = None,
+    groove: str | None = None,
 ) -> np.ndarray:
     style = STYLES.get(genre, STYLES["pop"])
-    bpm = float(bpm) if bpm and bpm >= 40 else float(style["bpm"])
+    pattern = resolve_groove(genre, groove)
+    bpm = float(bpm) if bpm and bpm >= 40 else float(pattern["bpm"])
     offset = max(int(offset), 0)
     root = int(style["root"])
     chords = style["chords"]
-    swing = float(style["swing"])
+    swing = float(pattern.get("swing", style["swing"]))
     step = 60.0 / bpm / 4.0
     if not instruments:
         instruments = list(style["default"])
@@ -269,6 +468,12 @@ def render_bed(
 
     profile = style.get("profile", "standard")
     urban = profile == "urban" or genre == "pop"
+    kick_hits = set(pattern["kick"])
+    snare_hits = set(pattern["snare"])
+    open_hits = set(pattern["open_hat"])
+    tom_hits = set(pattern["tom"])
+    hat_mode = str(pattern.get("hat") or "8th")
+    use_clap = bool(pattern.get("clap"))
 
     drums = np.zeros(n, dtype=np.float32)
     bass = np.zeros(n, dtype=np.float32)
@@ -279,9 +484,9 @@ def render_bed(
     kick = _kick(sr) if "drums" in want else None
     snare = _snare(sr) if "drums" in want else None
     hat = _hat(sr) if "drums" in want else None
-    clap = _clap(sr) if "drums" in want and urban else None
-    open_hat = _hat(sr, True) if "drums" in want and genre == "trap" else None
-    tom = _tom(sr) if "drums" in want and genre == "rock" else None
+    clap = _clap(sr) if "drums" in want and use_clap else None
+    open_hat = _hat(sr, True) if "drums" in want and open_hits else None
+    tom = _tom(sr) if "drums" in want and tom_hits else None
     sub808 = _sub808(sr) if "bass" in want and urban else None
 
     i = 0
@@ -300,39 +505,37 @@ def render_bed(
         eighth = int(step * sr * 2)
         quarter = int(step * sr * 4)
 
-        if kick is not None:
-            if urban:
-                kick_hits = {0, 8}
-            elif genre == "trap":
-                kick_hits = {0, 6, 10}
-            elif genre == "rock":
-                kick_hits = {0, 4, 8, 12}
-            else:
-                kick_hits = {0, 8}
-            if bar_pos in kick_hits:
-                _place(drums, kick, at, 0.82 if urban else 0.9)
-                end = min(n, at + len(kick))
-                kick_env[at:end] = np.maximum(kick_env[at:end], np.linspace(1, 0, end - at))
-                if sub808 is not None:
-                    note = _sub808(sr, chord_root - 24)
-                    _place(bass, note, at, 1.0)
+        if kick is not None and bar_pos in kick_hits:
+            _place(drums, kick, at, 0.82 if urban else 0.9)
+            end = min(n, at + len(kick))
+            kick_env[at:end] = np.maximum(kick_env[at:end], np.linspace(1, 0, end - at))
+            if sub808 is not None:
+                note = _sub808(sr, chord_root - 24)
+                _place(bass, note, at, 1.0)
 
-        if snare is not None and bar_pos in {4, 12}:
+        if snare is not None and bar_pos in snare_hits:
             _place(drums, snare, at, 0.52 if urban else 0.58)
             if clap is not None:
                 _place(drums, clap, at, 0.38)
 
-        if hat is not None:
-            if urban or genre == "trap":
+        if hat is not None and _hat_hit(hat_mode, bar_pos):
+            if hat_mode == "16th" or urban:
                 gain = 0.2 + (0.06 if bar_pos % 4 == 0 else 0.0)
-                _place(drums, hat, at, gain)
-            elif bar_pos % 2 == 0:
-                _place(drums, hat, at, 0.24)
-            if open_hat is not None and bar_pos in {7, 15}:
-                _place(drums, open_hat, at, 0.2)
+            else:
+                gain = 0.24
+            _place(drums, hat, at, gain)
+        if open_hat is not None and bar_pos in open_hits:
+            _place(drums, open_hat, at, 0.2)
 
-        if tom is not None and bar_pos in {2, 6, 10, 14}:
+        if tom is not None and bar_pos in tom_hits:
             _place(drums, tom, at, 0.22)
+
+        if "perc" in want:
+            if bar_pos % 2 == 1:
+                shaker = _hat(sr)
+                _place(drums, shaker, at, 0.11)
+            if bar_pos in {6, 14}:
+                _place(drums, _clap(sr), at, 0.16)
 
         if "bass" in want and not urban:
             if genre == "trap" and bar_pos in {0, 6, 10}:
@@ -344,39 +547,46 @@ def render_bed(
                 wave = _tone(_midi_hz(chord_root - 12), blen, sr, "sine")
                 _place(bass, wave, at, 0.36)
 
-        if "keys" in want and bar_pos in ({0} if urban else {0, 4, 8, 12}):
-            blen = min(eighth, n - at)
+        if "keys" in want and bar_pos in {0, 8} | (set() if urban else {4, 12}):
+            blen = min(eighth if urban else quarter, n - at)
             stab = np.zeros(blen, dtype=np.float32)
             for midi in notes:
                 stab += _tone(_midi_hz(midi + 12), blen, sr, "sine")
-            _place(harmony, stab / 3.0, at, 0.1 if urban else 0.2)
+            _place(harmony, stab / 3.0, at, 0.16 if urban else 0.24)
 
         if "guitar" in want and bar_pos % 2 == 0:
             blen = min(eighth, n - at)
             pluck = _pluck(_midi_hz(notes[bar_pos % 3]), blen, sr)
-            _place(harmony, pluck, at, 0.18)
+            _place(harmony, pluck, at, 0.22)
 
         if "pad" in want and bar_pos == 0:
             plen = int(min(n - at, step * sr * 16))
             pad = np.zeros(plen, dtype=np.float32)
             for midi in notes:
                 pad += _tone(_midi_hz(midi), plen, sr, "pad")
-            _place(texture, pad / 3.0, at, 0.12 if urban else 0.18)
+            _place(texture, pad / 3.0, at, 0.16 if urban else 0.22)
 
-        if "strings" in want and bar_pos == 0 and genre == "slow":
+        if "strings" in want and bar_pos == 0:
             plen = int(min(n - at, step * sr * 16))
             layer = np.zeros(plen, dtype=np.float32)
             for midi in (notes[0] + 12, notes[2] + 12):
                 layer += _tone(_midi_hz(midi), plen, sr, "pad")
-            _place(texture, layer / 2.0, at, 0.14)
+            _place(texture, layer / 2.0, at, 0.18)
 
-        if "synth" in want and bar_pos % 4 == 0 and not urban:
+        if "synth" in want and bar_pos % 4 == 0:
             blen = min(eighth, n - at)
             hook_midi = notes[0] + 12
             if bar_pos in {8}:
                 hook_midi = notes[1] + 12
             wave = _tone(_midi_hz(hook_midi), blen, sr, "saw")
-            _place(texture, wave, at, 0.12)
+            _place(texture, wave, at, 0.16 if urban else 0.14)
+
+        if "brass" in want and bar_pos in {0, 8}:
+            blen = min(int(step * sr * 3), n - at)
+            horn = np.zeros(blen, dtype=np.float32)
+            for midi in (notes[0] + 12, notes[1] + 12, notes[2] + 12):
+                horn += _tone(_midi_hz(midi), blen, sr, "saw")
+            _place(harmony, horn / 3.0, at, 0.2)
 
         i += 1
 
@@ -384,10 +594,11 @@ def render_bed(
     texture = _sidechain(texture, kick_env, 0.22 if urban else 0.28)
     harmony = _sidechain(harmony, kick_env, 0.12 if urban else 0.18)
 
-    if urban:
-        session = drums * 1.05 + bass * 1.15 + harmony * 0.55 + texture * 0.45
-    else:
-        session = drums * 1.0 + bass * 0.95 + harmony * 0.85 + texture * 0.8
+    drums_g = 1.08 if "drums" in want or "perc" in want else 0.0
+    bass_g = 1.18 if "bass" in want else 0.0
+    harm_g = 0.95 if want & {"keys", "guitar", "brass"} else 0.55
+    tex_g = 0.9 if want & {"pad", "synth", "strings"} else 0.45
+    session = drums * drums_g + bass * bass_g + harmony * harm_g + texture * tex_g
     return finish_production(session, sr, genre, vocal)
 
 
@@ -401,9 +612,20 @@ def write_bed(
     offset: int = 0,
     ambient: bool = False,
     vocal: np.ndarray | None = None,
+    groove: str | None = None,
 ) -> Path:
     return write_wav(
         dest,
-        render_bed(genre, instruments, n, sr, bpm=bpm, offset=offset, ambient=ambient, vocal=vocal),
+        render_bed(
+            genre,
+            instruments,
+            n,
+            sr,
+            bpm=bpm,
+            offset=offset,
+            ambient=ambient,
+            vocal=vocal,
+            groove=groove,
+        ),
         sr,
     )
