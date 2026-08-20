@@ -77,14 +77,21 @@ export function SongWorkspace({ initial }: { initial: Song }) {
     PIPELINE_COPY[(song.pipeline_step as PipelineStep) ?? "analyzing"] ??
     "Ses işleniyor...";
 
-  async function retry() {
+  async function regenerate() {
     const res = await fetch(`/api/songs/${song.id}/retry`, { method: "POST" });
     const json = await res.json();
     if (!res.ok) {
-      toast.error(json.error ?? "Yeniden deneme başarısız");
+      toast.error(json.error ?? "Yeniden oluşturma başarısız");
       return;
     }
-    toast.success("İşlem yeniden başlatıldı");
+    setSong((prev) => ({
+      ...prev,
+      status: "pending",
+      pipeline_step: "analyzing",
+      error_message: null,
+      processed_audio_url: null,
+    }));
+    toast.success("Şarkı yeniden oluşturuluyor");
   }
 
   if (song.status === "completed") {
@@ -97,19 +104,24 @@ export function SongWorkspace({ initial }: { initial: Song }) {
             Şarkın tamamlandı
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Vokal ve seçtiğin altyapı harmanlandı. RVC, lisanslı model
-            bağlandığında tınıyı değiştirir.
+            Vokal temizlendi, akortlandı ve seçtiğin tarza göre üretilen
+            altyapı ile karıştırıldı.
           </p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-5">
           <WaveformPlayer src={src} height={96} />
         </div>
-        <a
-          href={`/api/songs/${song.id}/download`}
-          className={cn(buttonVariants())}
-        >
-          İndir
-        </a>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href={`/api/songs/${song.id}/download`}
+            className={cn(buttonVariants())}
+          >
+            İndir
+          </a>
+          <Button variant="outline" onClick={() => void regenerate()}>
+            Yeniden oluştur
+          </Button>
+        </div>
       </div>
     );
   }
@@ -121,7 +133,7 @@ export function SongWorkspace({ initial }: { initial: Song }) {
         <p className="text-muted-foreground">
           {song.error_message ?? "Bilinmeyen hata"}
         </p>
-        <Button onClick={() => void retry()}>Yeniden dene</Button>
+        <Button onClick={() => void regenerate()}>Yeniden dene</Button>
       </div>
     );
   }

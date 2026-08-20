@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
     "127.0.0.1",
     "localhost",
     "*.trycloudflare.com",
+    "*.ngrok-free.app",
+    "*.ngrok.app",
   ],
   experimental: {
     proxyClientMaxBodySize: "25mb",

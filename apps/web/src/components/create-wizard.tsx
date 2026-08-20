@@ -6,6 +6,14 @@ import { AudioCapture } from "@/components/audio-capture";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  INSTRUMENTS,
+  STYLES,
+  styleById,
+  type InstrumentId,
+  type RhythmMode,
+  type StyleId,
+} from "@/lib/arrangement";
 import { isCreditsUiDisabled } from "@/lib/credits";
 import { creditsForDuration, type Instrumental } from "@/lib/types";
 import { toast } from "sonner";
@@ -17,7 +25,11 @@ export function CreateWizard() {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
   const [beds, setBeds] = useState<Instrumental[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [genre, setGenre] = useState<StyleId>("pop");
+  const [instruments, setInstruments] = useState<InstrumentId[]>([
+    ...styleById("pop").instruments,
+  ]);
+  const [rhythm, setRhythm] = useState<RhythmMode>("follow");
   const [submitting, setSubmitting] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
@@ -35,19 +47,36 @@ export function CreateWizard() {
   }, [objectUrl]);
 
   const cost = useMemo(() => creditsForDuration(duration), [duration]);
-  const selectedBed = beds.find((bed) => bed.id === selected);
+  const style = styleById(genre);
+  const previewBed = beds.find((bed) => bed.genre === genre) ?? beds[0];
 
-  async function playPreview(bed: Instrumental) {
+  function pickStyle(next: StyleId) {
+    setGenre(next);
+    setInstruments([...styleById(next).instruments]);
+  }
+
+  function toggleInstrument(id: InstrumentId) {
+    setInstruments((prev) => {
+      if (prev.includes(id)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((item) => item !== id);
+      }
+      return [...prev, id];
+    });
+  }
+
+  async function playPreview() {
+    if (!previewBed) return;
     const url =
-      previewUrls[bed.id] ??
-      bed.preview_url ??
-      `/demo/${bed.slug}.wav`;
-    setPreviewUrls((prev) => ({ ...prev, [bed.id]: url }));
+      previewUrls[previewBed.id] ??
+      previewBed.preview_url ??
+      `/demo/${previewBed.slug}.wav`;
+    setPreviewUrls((prev) => ({ ...prev, [previewBed.id]: url }));
     void new Audio(url).play();
   }
 
   async function submit() {
-    if (!file || !selectedBed) return;
+    if (!file) return;
     setSubmitting(true);
     try {
       const form = new FormData();
@@ -64,7 +93,10 @@ export function CreateWizard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           durationSeconds: duration,
-          instrumentalId: selectedBed.id,
+          genre,
+          instruments,
+          rhythm,
+          instrumentalId: previewBed?.id,
           originalPath: signJson.path,
           contentType: file.type,
         }),
@@ -87,7 +119,7 @@ export function CreateWizard() {
       <div className="flex gap-2 text-sm text-muted-foreground">
         <span className={step === 1 ? "text-foreground" : ""}>1. Ses</span>
         <span>/</span>
-        <span className={step === 2 ? "text-foreground" : ""}>2. Altyapı</span>
+        <span className={step === 2 ? "text-foreground" : ""}>2. Tarz</span>
         <span>/</span>
         <span className={step === 3 ? "text-foreground" : ""}>3. Onay</span>
       </div>
@@ -119,58 +151,99 @@ export function CreateWizard() {
       ) : null}
 
       {step === 2 ? (
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            {beds.map((bed) => (
-              <div
-                key={bed.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelected(bed.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setSelected(bed.id);
-                  }
-                }}
-                className={`cursor-pointer rounded-2xl border p-4 text-left transition ${
-                  selected === bed.id
+        <div className="space-y-6">
+          <div>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Tarzı seç. Altyapı bu tarza ve enstrümanlara göre üretilir. Ritim
+              varsayılan olarak kaydına uyar.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {STYLES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => pickStyle(item.id)}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    genre === item.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-card hover:border-primary/50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{item.title}</p>
+                    <Badge variant="secondary">{item.bpm} BPM</Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">{item.key}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-sm text-muted-foreground">Enstrümanlar</p>
+            <div className="flex flex-wrap gap-2">
+              {INSTRUMENTS.map((item) => {
+                const on = instruments.includes(item.id);
+                return (
+                  <Button
+                    key={item.id}
+                    type="button"
+                    size="sm"
+                    variant={on ? "default" : "outline"}
+                    onClick={() => toggleInstrument(item.id)}
+                  >
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-sm text-muted-foreground">Ritim</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setRhythm("follow")}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  rhythm === "follow"
                     ? "border-primary bg-primary/10"
                     : "border-border bg-card hover:border-primary/50"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <p className="font-medium">{bed.title}</p>
-                  <Badge variant="secondary">{bed.genre}</Badge>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {bed.bpm ? `${bed.bpm} BPM` : "BPM"} {bed.key ? `· ${bed.key}` : ""}
+                <p className="font-medium">Kaydıma uydur</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Söylediğin tempoyu okur, davul yoksa pad seninle nefes alır. Amatör
+                  kayıtta en güvenlisi.
                 </p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="mt-3 px-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void playPreview(bed);
-                  }}
-                >
-                  Önizle
-                </Button>
-              </div>
-            ))}
+              </button>
+              <button
+                type="button"
+                onClick={() => setRhythm("style")}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  rhythm === "style"
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-card hover:border-primary/50"
+                }`}
+              >
+                <p className="font-medium">Tarza kilitle</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {style.bpm} BPM ({style.bpmMin}–{style.bpmMax}). Sen biraz önde
+                  veya geride kalabilirsin.
+                </p>
+              </button>
+            </div>
           </div>
-          {beds.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Altyapı listesi boş. Supabase migration uygulandıktan sonra kartlar görünür.
-            </p>
-          ) : null}
+
+          <Button type="button" variant="ghost" className="px-0" onClick={() => void playPreview()}>
+            Tarz önizlemesi
+          </Button>
+
           <div className="flex justify-between">
             <Button variant="ghost" onClick={() => setStep(1)}>
               Geri
             </Button>
-            <Button disabled={!selected} onClick={() => setStep(3)}>
+            <Button disabled={!instruments.length} onClick={() => setStep(3)}>
               Devam
             </Button>
           </div>
@@ -187,7 +260,21 @@ export function CreateWizard() {
               Süre: <strong>{duration.toFixed(1)} sn</strong>
             </p>
             <p>
-              Altyapı: <strong>{selectedBed?.title}</strong>
+              Tarz: <strong>{style.title}</strong>
+            </p>
+            <p>
+              Enstrüman:{" "}
+              <strong>
+                {instruments
+                  .map((id) => INSTRUMENTS.find((item) => item.id === id)?.label ?? id)
+                  .join(", ")}
+              </strong>
+            </p>
+            <p>
+              Ritim:{" "}
+              <strong>
+                {rhythm === "follow" ? "Kaydına uyacak" : `${style.bpm} BPM kilit`}
+              </strong>
             </p>
             {isCreditsUiDisabled() ? (
               <p className="text-sm text-muted-foreground">
@@ -209,7 +296,6 @@ export function CreateWizard() {
           </CardContent>
         </Card>
       ) : null}
-
     </div>
   );
 }

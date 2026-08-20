@@ -17,6 +17,9 @@ class JobRequest(BaseModel):
     instrumental_url: str
     upload_url: str
     genre: str = "pop"
+    instruments: str = ""
+    rhythm: str = "follow"
+    bpm: float = 0
     callback_url: str = ""
     callback_secret: str = Field(default="")
 

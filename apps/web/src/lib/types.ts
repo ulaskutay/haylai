@@ -21,6 +21,7 @@ export type Song = {
   processed_audio_url: string | null;
   processed_path: string | null;
   genre: string | null;
+  instruments: string | string[] | null;
   instrumental_id: string | null;
   duration_seconds: number | null;
   credits_charged: number;
@@ -41,11 +42,11 @@ export type PipelineStep =
   | "export";
 
 export const PIPELINE_COPY: Record<PipelineStep, string> = {
-  analyzing: "Ses analiz ediliyor...",
+  analyzing: "Ritim ve ses analiz ediliyor...",
   cleaning: "Gürültü temizleniyor...",
   pitch: "Detoneler düzeltiliyor...",
-  rvc: "Vokal karakteri dönüştürülüyor...",
-  mix: "Vokal harmanlanıyor...",
+  rvc: "Vokal parlatılıyor...",
+  mix: "Vokal ve altyapı harmanlanıyor...",
   export: "Master hazırlanıyor...",
 };
 

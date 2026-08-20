@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isCreditsDisabled } from "@/lib/credits";
+import { normalizeInstruments } from "@/lib/arrangement";
 import { catalogByIdOrSlug, INSTRUMENTAL_CATALOG } from "@/lib/instrumentals";
 import { startProcessing } from "@/lib/processing";
 
@@ -23,13 +24,16 @@ export async function POST(
     .eq("user_id", user.id)
     .single();
 
-  if (!song || song.status !== "failed") {
-    return NextResponse.json({ error: "Yeniden deneme yok" }, { status: 400 });
+  if (!song || !["failed", "completed"].includes(song.status as string)) {
+    return NextResponse.json(
+      { error: "Bu şarkı şu an yeniden oluşturulamaz" },
+      { status: 400 },
+    );
   }
 
   const skipCredits = isCreditsDisabled();
   const amount = song.credits_charged as number;
-  if (!skipCredits && amount) {
+  if (!skipCredits && amount && song.status === "failed") {
     const { error: creditError } = await admin.rpc("consume_credits", {
       p_user_id: user.id,
       p_amount: amount,
@@ -59,16 +63,25 @@ export async function POST(
   }
 
   if (!bed || !song.original_path) {
-    if (!skipCredits && amount) {
+    if (!skipCredits && amount && song.status === "failed") {
       await admin.rpc("add_credits", { p_user_id: user.id, p_amount: amount });
     }
     return NextResponse.json({ error: "Eksik kaynak" }, { status: 400 });
   }
 
+  const genre = (song.genre as string) || bed.genre;
   const processedPath = `${user.id}/${id}.mp3`;
+
   await admin
     .from("songs")
-    .update({ status: "pending", error_message: null, pipeline_step: "analyzing" })
+    .update({
+      status: "pending",
+      error_message: null,
+      pipeline_step: "analyzing",
+      processed_path: processedPath,
+      processed_audio_url: null,
+      runpod_job_id: null,
+    })
     .eq("id", id);
 
   await startProcessing({
@@ -76,7 +89,10 @@ export async function POST(
     originalPath: song.original_path,
     processedPath,
     instrumentalPath: String(bed.storage_path).replace(/^instrumentals\//, ""),
-    genre: bed.genre,
+    genre,
+    instruments: normalizeInstruments(song.instruments, genre),
+    rhythm: "follow",
+    bpm: 0,
   });
 
   return NextResponse.json({ ok: true });

@@ -68,6 +68,13 @@ def _local_path(url: str) -> Path | None:
     return path
 
 
+def _public_headers(url: str, extra: dict | None = None) -> dict[str, str]:
+    headers = dict(extra or {})
+    if "ngrok" in url:
+        headers["ngrok-skip-browser-warning"] = "1"
+    return headers
+
+
 def download(url: str, dest: Path) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     local = _local_path(url)
@@ -75,7 +82,7 @@ def download(url: str, dest: Path) -> Path:
         dest.write_bytes(local.read_bytes())
         return dest
     with httpx.Client(timeout=120, follow_redirects=True) as client:
-        res = client.get(url)
+        res = client.get(url, headers=_public_headers(url))
         res.raise_for_status()
         dest.write_bytes(res.content)
     return dest
@@ -88,7 +95,11 @@ def upload_bytes(url: str, data: bytes, content_type: str = "audio/mpeg") -> Non
         local.write_bytes(data)
         return
     with httpx.Client(timeout=120) as client:
-        res = client.put(url, content=data, headers={"Content-Type": content_type})
+        res = client.put(
+            url,
+            content=data,
+            headers=_public_headers(url, {"Content-Type": content_type}),
+        )
         res.raise_for_status()
 
 
@@ -132,7 +143,7 @@ def to_mp3_bytes(audio: np.ndarray, sr: int) -> bytes:
                     "-codec:a",
                     "libmp3lame",
                     "-b:a",
-                    "192k",
+                    "256k",
                     str(mp3_path),
                 ],
                 check=True,

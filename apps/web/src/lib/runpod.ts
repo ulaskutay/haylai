@@ -14,6 +14,9 @@ export type WorkerJobInput = {
   instrumental_url: string;
   upload_url: string;
   genre: string;
+  instruments: string;
+  rhythm: string;
+  bpm: number;
   callback_url: string;
   callback_secret: string;
 };

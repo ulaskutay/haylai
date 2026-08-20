@@ -25,9 +25,15 @@ export async function buildWorkerInput(params: {
   processedPath: string;
   instrumentalPath: string;
   genre: string;
+  instruments?: string[];
+  rhythm?: string;
+  bpm?: number;
   localDisk?: boolean;
 }): Promise<WorkerJobInput> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const instruments = (params.instruments ?? []).join(",");
+  const rhythm = params.rhythm === "style" ? "style" : "follow";
+  const bpm = rhythm === "style" ? Number(params.bpm || 0) : 0;
 
   if (params.localDisk) {
     return {
@@ -36,6 +42,9 @@ export async function buildWorkerInput(params: {
       instrumental_url: `local://instrumentals/${params.instrumentalPath}`,
       upload_url: `local://processed/${params.processedPath}`,
       genre: params.genre,
+      instruments,
+      rhythm,
+      bpm,
       callback_url: `${appUrl}/api/webhooks/runpod`,
       callback_secret: process.env.WORKER_CALLBACK_SECRET ?? "",
     };
@@ -57,6 +66,9 @@ export async function buildWorkerInput(params: {
       absolute: true,
     }),
     genre: params.genre,
+    instruments,
+    rhythm,
+    bpm,
     callback_url: `${appUrl}/api/webhooks/runpod`,
     callback_secret: process.env.WORKER_CALLBACK_SECRET ?? "",
   };
@@ -307,6 +319,9 @@ export async function startProcessing(params: {
   processedPath: string;
   instrumentalPath: string;
   genre: string;
+  instruments?: string[];
+  rhythm?: string;
+  bpm?: number;
 }) {
   const mode = await resolveProcessMode();
   const admin = createAdminClient();

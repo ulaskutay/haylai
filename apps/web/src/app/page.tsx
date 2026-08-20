@@ -15,8 +15,9 @@ export default function HomePage() {
             Amatör kaydını stüdyo vokaline çevir.
           </h1>
           <p className="mt-4 max-w-xl text-lg text-muted-foreground">
-            Gürültüyü sil, detoneleri düzelt, RVC tınısına geç ve seçtiğin
-            altyapı ile mix/master al. Dakikalar içinde indirilebilir şarkı.
+            Gürültüyü sil, detoneleri düzelt, kendi sesinin en iyi halini
+            çıkar. Tarzına ve enstrümanlara göre altyapı üretilir, mix/master
+            hazır olur.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/create" className={cn(buttonVariants({ size: "lg" }))}>

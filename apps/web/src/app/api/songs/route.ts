@@ -5,6 +5,7 @@ import { startProcessing } from "@/lib/processing";
 import { signedUrl } from "@/lib/storage";
 import { isCreditsDisabled } from "@/lib/credits";
 import { catalogByIdOrSlug } from "@/lib/instrumentals";
+import { normalizeInstruments, normalizeRhythm, styleById } from "@/lib/arrangement";
 import { creditsForDuration, MAX_DURATION_SECONDS } from "@/lib/types";
 
 export async function GET() {
@@ -37,12 +38,18 @@ export async function POST(request: Request) {
   const body = (await request.json()) as {
     durationSeconds?: number;
     instrumentalId?: string;
+    genre?: string;
+    instruments?: string[];
+    rhythm?: string;
     originalPath?: string;
     contentType?: string;
   };
 
   const duration = Number(body.durationSeconds ?? 0);
-  if (!body.instrumentalId || !body.originalPath) {
+  const style = styleById(String(body.genre || ""));
+  const instruments = normalizeInstruments(body.instruments, style.id);
+  const rhythm = normalizeRhythm(body.rhythm);
+  if (!body.originalPath) {
     return NextResponse.json({ error: "Eksik alanlar" }, { status: 400 });
   }
   if (!Number.isFinite(duration) || duration <= 0) {
@@ -62,9 +69,9 @@ export async function POST(request: Request) {
     storage_path: string;
   } | null = null;
 
-  const looksLikeUuid = /^[0-9a-f-]{36}$/i.test(body.instrumentalId);
+  const looksLikeUuid = /^[0-9a-f-]{36}$/i.test(body.instrumentalId ?? "");
 
-  if (looksLikeUuid) {
+  if (looksLikeUuid && body.instrumentalId) {
     const { data: dbBed } = await admin
       .from("instrumentals")
       .select("*")
@@ -75,7 +82,9 @@ export async function POST(request: Request) {
   }
 
   if (!bed) {
-    const catalog = catalogByIdOrSlug(body.instrumentalId);
+    const catalog =
+      catalogByIdOrSlug(body.instrumentalId ?? "") ??
+      catalogByIdOrSlug(`fallback-${style.id}`);
     if (catalog) {
       const { data: upserted, error: upsertError } = await admin
         .from("instrumentals")
@@ -135,21 +144,29 @@ export async function POST(request: Request) {
   const songId = crypto.randomUUID();
   const instrumentalKey = String(bed.storage_path).replace(/^instrumentals\//, "");
   const processedPath = `${user.id}/${songId}.mp3`;
+  const instrumentsCsv = instruments.join(",");
 
-  const { error: insertError } = await admin.from("songs").insert({
+  const baseRow = {
     id: songId,
     user_id: user.id,
     original_path: body.originalPath,
     original_audio_url: signedUrl("originals", body.originalPath, {
       expiresInSec: 60 * 60 * 24,
     }),
-    genre: bed.genre,
+    genre: style.id,
     instrumental_id: /^[0-9a-f-]{36}$/i.test(bed.id) ? bed.id : null,
     duration_seconds: duration,
     credits_charged: amount,
-    status: "pending",
+    status: "pending" as const,
     pipeline_step: "analyzing",
-  });
+  };
+
+  let insertError = (
+    await admin.from("songs").insert({ ...baseRow, instruments: instrumentsCsv })
+  ).error;
+  if (insertError) {
+    insertError = (await admin.from("songs").insert(baseRow)).error;
+  }
 
   if (insertError) {
     if (!skipCredits && amount) {
@@ -164,7 +181,10 @@ export async function POST(request: Request) {
       originalPath: body.originalPath,
       processedPath,
       instrumentalPath: instrumentalKey,
-      genre: bed.genre,
+      genre: style.id,
+      instruments,
+      rhythm,
+      bpm: rhythm === "style" ? style.bpm : 0,
     });
   } catch (error) {
     if (!skipCredits && amount) {
