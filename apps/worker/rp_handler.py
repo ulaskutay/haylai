@@ -14,8 +14,6 @@ else:
 
 try:
     import runpod
-    from pipeline.audio import use_gpu_models
-    from pipeline.bed_ai import ml_bed_enabled, warmup
     from pipeline.job import run_bed_loop, run_job
     from pipeline.types import JobPayload
 except Exception:
@@ -23,18 +21,6 @@ except Exception:
     sys.stdout.flush()
     sys.stderr.flush()
     raise
-
-
-def _warmup_models() -> None:
-    if not use_gpu_models():
-        return
-    if ml_bed_enabled():
-        try:
-            print("warming up bed AI model...", flush=True)
-            warmup()
-            print("bed AI ready", flush=True)
-        except Exception:
-            traceback.print_exc()
 
 
 def handler(event):
@@ -53,5 +39,5 @@ def handler(event):
 
 
 if __name__ == "__main__":
-    _warmup_models()
+    print("runpod serverless listening (models load on first job)", flush=True)
     runpod.serverless.start({"handler": handler})
