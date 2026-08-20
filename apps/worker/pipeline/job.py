@@ -20,7 +20,7 @@ from pipeline.enhance import enhance
 from pipeline.rvc import convert as rvc_convert
 from pipeline.export import export_mp3
 from pipeline.mix import mix
-from pipeline.bed_ai import prefer_ml_on_gpu, try_generate_bed
+from pipeline.bed_ai import bed_mode, ml_bed_enabled, prefer_ml_on_gpu, try_generate_bed
 from pipeline.pitch import correct_pitch
 from pipeline.rhythm import analyze_rhythm
 from pipeline.types import STEPS, JobPayload
