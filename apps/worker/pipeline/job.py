@@ -140,7 +140,7 @@ def run_bed_loop(payload: JobPayload) -> dict:
         )
         if ml_bed:
             dest = ml_bed
-            source = ml_engine or "ml"
+            source = "ml"
         else:
             write_bed(
                 dest,

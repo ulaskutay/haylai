@@ -257,7 +257,10 @@ def _load_acestep():
     from diffusers import AceStepPipeline
 
     model_id = os.environ.get("ACESTEP_MODEL", "ACE-Step/acestep-v15-xl-turbo-diffusers")
-    pipe = AceStepPipeline.from_pretrained(model_id, torch_dtype=torch.bfloat16)
+    pipe = AceStepPipeline.from_pretrained(
+        model_id,
+        torch_dtype=torch.float16,
+    )
     return pipe.to("cuda")
 
 

@@ -40,7 +40,7 @@ RUN python3.11 - <<'PY'
 import torch
 from diffusers import AceStepPipeline
 model_id = "ACE-Step/acestep-v15-xl-turbo-diffusers"
-AceStepPipeline.from_pretrained(model_id, torch_dtype=torch.bfloat16)
+AceStepPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
 print("acestep-turbo cached")
 PY
 
