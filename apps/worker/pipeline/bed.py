@@ -171,10 +171,10 @@ def _master_glue(audio: np.ndarray, sr: int, genre: str) -> np.ndarray:
     freqs = np.fft.rfftfreq(len(x), 1 / sr)
     if genre == "pop":
         # Target: Şehir Akıyor-style dense sub, dark top (sub/mid ~6, hi/mid ~0.12)
-        spec[freqs < 150] *= 2.6
-        spec[(freqs >= 150) & (freqs < 420)] *= 1.55
-        spec[(freqs >= 420) & (freqs < 2500)] *= 1.05
-        spec[freqs > 4500] *= 0.58
+        spec[freqs < 150] *= 3.4
+        spec[(freqs >= 150) & (freqs < 420)] *= 1.75
+        spec[(freqs >= 420) & (freqs < 2500)] *= 1.12
+        spec[freqs > 4500] *= 0.52
     elif genre in BEAT_GENRES:
         spec[freqs < 120] *= 1.8
         spec[(freqs >= 120) & (freqs < 400)] *= 1.25
@@ -235,12 +235,8 @@ def finish_production(
     genre: str,
     vocal: np.ndarray | None = None,
 ) -> np.ndarray:
+    del vocal  # sidechain belongs in mix.py — ducking here buried the beat
     mix = _master_glue(audio.astype(np.float32), sr, genre)
-    if vocal is not None and len(vocal) == len(mix):
-        win = max(int(sr * 0.08), 64)
-        env = np.convolve(np.abs(vocal.astype(np.float32)), np.ones(win) / win, mode="same")
-        env /= float(np.max(env) + 1e-8)
-        mix *= 0.55 + 0.45 * env
     fade = min(int(sr * 0.05), len(mix) // 10)
     if fade:
         mix[:fade] *= np.linspace(0, 1, fade)

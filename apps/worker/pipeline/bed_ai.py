@@ -11,8 +11,9 @@ from pipeline.bed import STYLES, finish_production, render_sub_layer
 
 GENRE_PROMPTS: dict[str, str] = {
     "pop": (
-        "dark urban pop production, heavy 808 sub bass, crisp trap hi-hats, snare clap, "
-        "moody minor key, {bpm} BPM, wide stereo, radio-ready mix, instrumental only, no vocals"
+        "full dark urban pop beat, loud punchy drums, heavy 808 sub bass, crisp trap hi-hats, "
+        "snare clap on two and four, groovy syncopated rhythm, moody A minor, {bpm} BPM, "
+        "wide stereo, dense professional mix, instrumental only, no vocals, no singing"
     ),
     "trap": (
         "hard trap beat, distorted 808 bass, fast rolling hi-hats, dark cinematic, "
@@ -152,7 +153,7 @@ def _postprocess_bed(
     if genre in {"pop", "trap"} and bpm >= 40 and sub_mix > 0:
         sub = render_sub_layer(genre, len(wav), sr, bpm, offset=0)
         wav = np.clip(wav + sub * sub_mix, -1.0, 1.0)
-    return finish_production(wav, sr, genre, vocal)
+    return finish_production(wav, sr, genre, None)
 
 
 @lru_cache(maxsize=1)
@@ -289,7 +290,7 @@ def generate_bed(
         sub_mix = 0.38
     else:
         wav, gen_sr = _generate_acestep(prompt, duration, resolved_bpm, keyscale)
-        sub_mix = 0.22
+        sub_mix = 0.38
 
     wav = _postprocess_bed(wav, gen_sr, sr, n, genre, resolved_bpm, vocal, sub_mix)
     return write_wav(dest, wav, sr)
