@@ -17,7 +17,7 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ulaskutay/haylai-worker
-  RUNPOD_ENDPOINT_ID: 17i71qd05h9xoi
+  RUNPOD_ENDPOINT_ID: pef21dmu82fn6l
 
 jobs:
   build-and-deploy:
@@ -50,7 +50,7 @@ jobs:
             echo "RUNPOD_API_KEY secret not set; skipping endpoint update."
             exit 0
           fi
-          curl -fsS -X POST "https://rest.runpod.io/v1/endpoints/${{ env.RUNPOD_ENDPOINT_ID }}/update" \
+          curl -fsS -X PATCH "https://api.runpod.io/v2/serverless/${{ env.RUNPOD_ENDPOINT_ID }}" \
             -H "Authorization: Bearer ${RUNPOD_API_KEY}" \
             -H "Content-Type: application/json" \
-            -d "{\"imageName\":\"${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\",\"workersMin\":0,\"workersMax\":1,\"flashboot\":true,\"gpuTypeIds\":[\"NVIDIA L4\"]}"
+            -d "{\"image\":\"${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\",\"disk\":50,\"flashboot\":\"OFF\",\"gpu\":{\"pools\":[\"AMPERE_24\",\"ADA_24\"],\"count\":1,\"allowedCudaVersions\":[\"12.4\",\"12.5\",\"12.7\",\"12.8\",\"12.9\"],\"excludedTypes\":[\"NVIDIA RTX PRO 6000 Blackwell Server Edition MIG 1g.24gb\"]},\"workers\":{\"min\":1,\"max\":1,\"idleTimeout\":120},\"scaling\":{\"type\":\"QUEUE_DELAY\",\"queueDelay\":4}}"

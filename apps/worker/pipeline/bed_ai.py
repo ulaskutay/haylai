@@ -253,6 +253,9 @@ def _postprocess_bed(
 
 @lru_cache(maxsize=1)
 def _load_acestep():
+    import importlib
+    from functools import wraps
+
     import torch
     from diffusers import AceStepPipeline
 
@@ -261,7 +264,54 @@ def _load_acestep():
         model_id,
         torch_dtype=torch.float16,
     )
-    return pipe.to("cuda")
+    pipe = pipe.to("cuda")
+
+    # PyTorch 2.5 cannot argsort CUDA bool tensors. ACE-Step's remote model
+    # sorts attention masks in pack_sequences, so cast only those masks while
+    # preserving their truthy/falsey ordering semantics.
+    try:
+        torch.tensor([[True, False]], device="cuda").argsort(
+            dim=1, descending=True, stable=True
+        )
+    except RuntimeError as exc:
+        if "does not support bool dtype" not in str(exc):
+            raise
+
+        components = [
+            getattr(pipe, name, None)
+            for name in ("transformer", "model")
+        ]
+        components.extend(getattr(pipe, "components", {}).values())
+        for component in components:
+            module_name = getattr(getattr(component, "__class__", None), "__module__", "")
+            if not module_name:
+                continue
+            module = importlib.import_module(module_name)
+            original = getattr(module, "pack_sequences", None)
+            if original is None:
+                continue
+            if getattr(original, "__hayl_cuda_bool_compat__", False):
+                break
+
+            @wraps(original)
+            def pack_sequences_cuda_compat(
+                hidden1, hidden2, mask1, mask2, *args, **kwargs
+            ):
+                if mask1.is_cuda and mask1.dtype == torch.bool:
+                    mask1 = mask1.to(torch.int32)
+                if mask2.is_cuda and mask2.dtype == torch.bool:
+                    mask2 = mask2.to(torch.int32)
+                return original(
+                    hidden1, hidden2, mask1, mask2, *args, **kwargs
+                )
+
+            pack_sequences_cuda_compat.__hayl_cuda_bool_compat__ = True
+            setattr(module, "pack_sequences", pack_sequences_cuda_compat)
+            break
+        else:
+            raise RuntimeError("ACE-Step pack_sequences compatibility patch failed")
+
+    return pipe
 
 
 @lru_cache(maxsize=1)
