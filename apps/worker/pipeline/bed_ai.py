@@ -101,6 +101,42 @@ NEGATIVE_PROMPT = (
     "distortion, clipping, mono, thin, weak bass"
 )
 
+_CUDA_BOOL_ARGSORT_PATCHED = False
+
+
+def _install_cuda_bool_argsort_workaround() -> None:
+    global _CUDA_BOOL_ARGSORT_PATCHED
+    if _CUDA_BOOL_ARGSORT_PATCHED:
+        return
+
+    import torch
+
+    if not torch.cuda.is_available():
+        return
+
+    try:
+        torch.tensor([[True, False]], device="cuda").argsort(
+            dim=1, descending=True, stable=True
+        )
+        return
+    except RuntimeError as exc:
+        if "does not support bool dtype" not in str(exc):
+            raise
+
+    original = torch.Tensor.argsort
+    if getattr(original, "__hayl_cuda_bool_compat__", False):
+        _CUDA_BOOL_ARGSORT_PATCHED = True
+        return
+
+    def argsort(self, *args, **kwargs):
+        if self.is_cuda and self.dtype == torch.bool:
+            return original(self.to(torch.int32), *args, **kwargs)
+        return original(self, *args, **kwargs)
+
+    argsort.__hayl_cuda_bool_compat__ = True
+    torch.Tensor.argsort = argsort
+    _CUDA_BOOL_ARGSORT_PATCHED = True
+
 
 def ml_bed_enabled() -> bool:
     if not use_gpu_models():
@@ -253,81 +289,17 @@ def _postprocess_bed(
 
 @lru_cache(maxsize=1)
 def _load_acestep():
-    import importlib
-    import sys
-    from functools import wraps
-
     import torch
     from diffusers import AceStepPipeline
+
+    _install_cuda_bool_argsort_workaround()
 
     model_id = os.environ.get("ACESTEP_MODEL", "ACE-Step/acestep-v15-xl-turbo-diffusers")
     pipe = AceStepPipeline.from_pretrained(
         model_id,
         torch_dtype=torch.float16,
     )
-    pipe = pipe.to("cuda")
-
-    # PyTorch 2.5 cannot argsort CUDA bool tensors. ACE-Step's remote model
-    # sorts attention masks in pack_sequences, so cast only those masks while
-    # preserving their truthy/falsey ordering semantics.
-    try:
-        torch.tensor([[True, False]], device="cuda").argsort(
-            dim=1, descending=True, stable=True
-        )
-    except RuntimeError as exc:
-        if "does not support bool dtype" not in str(exc):
-            raise
-
-        components = [
-            getattr(pipe, name, None)
-            for name in ("transformer", "model")
-        ]
-        components.extend(getattr(pipe, "components", {}).values())
-        modules = []
-        for component in components:
-            module_name = getattr(getattr(component, "__class__", None), "__module__", "")
-            if not module_name:
-                continue
-            modules.append(importlib.import_module(module_name))
-
-        # ACE-Step loads its modeling file as Hugging Face remote code; that
-        # module is not necessarily the pipeline component's class module.
-        modules.extend(
-            module
-            for name, module in list(sys.modules.items())
-            if module is not None and "acestep" in name.lower()
-        )
-
-        seen_modules: set[int] = set()
-        for module in modules:
-            if id(module) in seen_modules:
-                continue
-            seen_modules.add(id(module))
-            original = getattr(module, "pack_sequences", None)
-            if original is None:
-                continue
-            if getattr(original, "__hayl_cuda_bool_compat__", False):
-                break
-
-            @wraps(original)
-            def pack_sequences_cuda_compat(
-                hidden1, hidden2, mask1, mask2, *args, **kwargs
-            ):
-                if torch.is_tensor(mask1) and mask1.is_cuda and mask1.dtype == torch.bool:
-                    mask1 = mask1.to(torch.int32)
-                if torch.is_tensor(mask2) and mask2.is_cuda and mask2.dtype == torch.bool:
-                    mask2 = mask2.to(torch.int32)
-                return original(
-                    hidden1, hidden2, mask1, mask2, *args, **kwargs
-                )
-
-            pack_sequences_cuda_compat.__hayl_cuda_bool_compat__ = True
-            setattr(module, "pack_sequences", pack_sequences_cuda_compat)
-            break
-        else:
-            raise RuntimeError("ACE-Step pack_sequences compatibility patch failed")
-
-    return pipe
+    return pipe.to("cuda")
 
 
 @lru_cache(maxsize=1)
@@ -430,6 +402,7 @@ def _generate_musicgen(prompt: str, duration: float) -> tuple[np.ndarray, int]:
 def warmup() -> None:
     if not ml_bed_enabled():
         return
+    _install_cuda_bool_argsort_workaround()
     for engine in bed_engine_chain():
         try:
             if engine == "acestep":

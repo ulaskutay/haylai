@@ -141,6 +141,10 @@ def run_bed_loop(payload: JobPayload) -> dict:
         if ml_bed:
             dest = ml_bed
             source = "ml"
+        elif ml_bed_enabled() and bed_mode() != "catalog":
+            raise RuntimeError(
+                "AI beat üretilemedi (ACE-Step). Worker loglarına bak — sentetik ritim kullanılmadı."
+            )
         else:
             write_bed(
                 dest,
