@@ -228,6 +228,16 @@ def _max_seconds() -> float:
         return 60.0
 
 
+def _sanitize_audio(wav: np.ndarray) -> np.ndarray:
+    out = np.asarray(wav, dtype=np.float32)
+    if out.size and not np.isfinite(out).all():
+        out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
+    peak = float(np.max(np.abs(out))) if out.size else 0.0
+    if peak > 1e-6:
+        out = out / peak
+    return np.clip(out, -1.0, 1.0).astype(np.float32)
+
+
 def _resample(audio: np.ndarray, src_sr: int, dst_sr: int) -> np.ndarray:
     if src_sr == dst_sr:
         return audio.astype(np.float32)
@@ -278,7 +288,7 @@ def _postprocess_bed(
     sub_mix: float,
     groove: str = "",
 ) -> np.ndarray:
-    wav = _to_mono(_normalize_stereo(wav))
+    wav = _sanitize_audio(_to_mono(_normalize_stereo(wav)))
     wav = _resample(wav, gen_sr, sr)
     wav = _loop_crossfade(wav, n, sr)
     if genre in {"pop", "trap"} and bpm >= 40 and sub_mix > 0:
