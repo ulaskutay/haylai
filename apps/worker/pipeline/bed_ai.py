@@ -254,6 +254,7 @@ def _postprocess_bed(
 @lru_cache(maxsize=1)
 def _load_acestep():
     import importlib
+    import sys
     from functools import wraps
 
     import torch
@@ -282,11 +283,26 @@ def _load_acestep():
             for name in ("transformer", "model")
         ]
         components.extend(getattr(pipe, "components", {}).values())
+        modules = []
         for component in components:
             module_name = getattr(getattr(component, "__class__", None), "__module__", "")
             if not module_name:
                 continue
-            module = importlib.import_module(module_name)
+            modules.append(importlib.import_module(module_name))
+
+        # ACE-Step loads its modeling file as Hugging Face remote code; that
+        # module is not necessarily the pipeline component's class module.
+        modules.extend(
+            module
+            for name, module in list(sys.modules.items())
+            if module is not None and "acestep" in name.lower()
+        )
+
+        seen_modules: set[int] = set()
+        for module in modules:
+            if id(module) in seen_modules:
+                continue
+            seen_modules.add(id(module))
             original = getattr(module, "pack_sequences", None)
             if original is None:
                 continue
@@ -297,9 +313,9 @@ def _load_acestep():
             def pack_sequences_cuda_compat(
                 hidden1, hidden2, mask1, mask2, *args, **kwargs
             ):
-                if mask1.is_cuda and mask1.dtype == torch.bool:
+                if torch.is_tensor(mask1) and mask1.is_cuda and mask1.dtype == torch.bool:
                     mask1 = mask1.to(torch.int32)
-                if mask2.is_cuda and mask2.dtype == torch.bool:
+                if torch.is_tensor(mask2) and mask2.is_cuda and mask2.dtype == torch.bool:
                     mask2 = mask2.to(torch.int32)
                 return original(
                     hidden1, hidden2, mask1, mask2, *args, **kwargs
