@@ -38,6 +38,7 @@ export type PipelineStep =
   | "cleaning"
   | "pitch"
   | "rvc"
+  | "bed"
   | "mix"
   | "export";
 
@@ -46,6 +47,7 @@ export const PIPELINE_COPY: Record<PipelineStep, string> = {
   cleaning: "Gürültü temizleniyor...",
   pitch: "Detoneler düzeltiliyor...",
   rvc: "Vokal parlatılıyor...",
+  bed: "Yapay zeka beat üretiliyor...",
   mix: "Vokal ve altyapı harmanlanıyor...",
   export: "Master hazırlanıyor...",
 };

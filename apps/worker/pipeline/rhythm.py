@@ -7,7 +7,7 @@ import numpy as np
 from pipeline.bed import STYLES
 
 BPM_RANGE: dict[str, tuple[float, float]] = {
-    "pop": (92.0, 114.0),
+    "pop": (86.0, 98.0),
     "trap": (128.0, 152.0),
     "rock": (108.0, 132.0),
     "lofi": (72.0, 96.0),
@@ -154,7 +154,8 @@ def analyze_rhythm(
         if confidence < 0.35:
             bpm = default_bpm
             offset = _align_offset(onsets, bpm, sr, n)
-            ambient = True
+            # Beat genres keep full drums even when timing is uncertain.
+            ambient = genre in {"slow", "lofi"}
         else:
             ambient = genre in {"slow", "lofi"} and confidence < 0.55
 

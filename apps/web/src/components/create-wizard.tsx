@@ -29,7 +29,7 @@ export function CreateWizard() {
   const [instruments, setInstruments] = useState<InstrumentId[]>([
     ...styleById("pop").instruments,
   ]);
-  const [rhythm, setRhythm] = useState<RhythmMode>("follow");
+  const [rhythm, setRhythm] = useState<RhythmMode>("style");
   const [submitting, setSubmitting] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
@@ -154,8 +154,8 @@ export function CreateWizard() {
         <div className="space-y-6">
           <div>
             <p className="mb-3 text-sm text-muted-foreground">
-              Tarzı seç. Altyapı bu tarza ve enstrümanlara göre üretilir. Ritim
-              varsayılan olarak kaydına uyar.
+              Tarzı seç. Tam prodüksiyon altyapısı — davul, bas, piyano, pad ve synth
+              birlikte çalışır.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               {STYLES.map((item) => (
@@ -226,10 +226,10 @@ export function CreateWizard() {
                     : "border-border bg-card hover:border-primary/50"
                 }`}
               >
-                <p className="font-medium">Tarza kilitle</p>
+                <p className="font-medium">Tarza kilitle (önerilen)</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {style.bpm} BPM ({style.bpmMin}–{style.bpmMax}). Sen biraz önde
-                  veya geride kalabilirsin.
+                  {style.bpm} BPM tam beat — davul, bas ve tüm enstrümanlar gerçek
+                  parça gibi birlikte çalar.
                 </p>
               </button>
             </div>

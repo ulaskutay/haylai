@@ -53,14 +53,14 @@ def _chunk_tune(path: Path, dest: Path, genre: str) -> Path:
             median = float(np.median(voiced))
             target = _nearest_hz(median, pcs)
             n_steps = float(np.clip(12 * np.log2(target / median), -2.5, 2.5))
-            if abs(n_steps) > 0.35:
+            if abs(n_steps) > 0.55:
                 grain = librosa.effects.pitch_shift(grain, sr=sr, n_steps=n_steps)
                 grain = grain[: end - start]
         out[start:end] += grain * w
         weight[start:end] += w
         start += hop
     tuned = out / np.maximum(weight, 1e-6)
-    mix = np.clip(0.45 * tuned + 0.55 * audio, -1, 1).astype(np.float32)
+    mix = np.clip(0.18 * tuned + 0.82 * audio, -1, 1).astype(np.float32)
     write_wav(dest, mix, sr)
     return dest
 

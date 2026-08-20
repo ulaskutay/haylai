@@ -34,12 +34,12 @@ def _run_rvc_cli(path: Path, dest: Path) -> Path:
     raise RuntimeError("RVC_INFER_PY is not set")
 
 
-def convert(path: Path, workdir: Path) -> Path:
+def convert(path: Path, workdir: Path) -> tuple[Path, bool]:
     dest = workdir / "rvc.wav"
     try:
-        return _run_rvc_cli(path, dest)
+        return _run_rvc_cli(path, dest), True
     except Exception:
         pass
     audio, sr = load_mono(path)
     write_wav(dest, audio, sr)
-    return dest
+    return dest, False

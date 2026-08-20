@@ -7,12 +7,14 @@ from tempfile import TemporaryDirectory
 import numpy as np
 
 from pipeline.audio import download, load_mono, to_wav, upload_bytes, write_wav
-from pipeline.bed import parse_instruments, write_bed
+from pipeline.bed import finish_production, parse_instruments, render_sub_layer, write_bed
 from pipeline.callback import notify
 from pipeline.clean import clean
 from pipeline.enhance import enhance
+from pipeline.rvc import convert as rvc_convert
 from pipeline.export import export_mp3
 from pipeline.mix import mix
+from pipeline.bed_ai import ml_bed_enabled, prefer_ml_on_gpu, try_generate_bed
 from pipeline.pitch import correct_pitch
 from pipeline.rhythm import analyze_rhythm
 from pipeline.types import STEPS, JobPayload
@@ -29,7 +31,13 @@ def _loop_bed(src: Path, n: int, sr: int) -> Path:
     return write_wav(dest, out.astype(np.float32), sr)
 
 
-def _align_loop_bed(src: Path, vocal: np.ndarray, n: int, sr: int) -> Path:
+def _align_loop_bed(
+    src: Path,
+    vocal: np.ndarray,
+    n: int,
+    sr: int,
+    bpm: float | None = None,
+) -> Path:
     bed, _ = load_mono(src, sr=sr)
     if len(bed) < sr:
         return _loop_bed(src, n, sr)
@@ -40,8 +48,9 @@ def _align_loop_bed(src: Path, vocal: np.ndarray, n: int, sr: int) -> Path:
     v_env = v_env / (float(np.max(v_env)) + 1e-8)
     best_start = 0
     best_corr = -1.0
-    search_len = min(len(bed), sr * 12)
-    hop = max(sr // 16, 512)
+    search_len = min(len(bed), sr * 16)
+    beat = int((60.0 / bpm) * sr) if bpm and bpm >= 40 else max(sr // 4, 1)
+    hop = max(beat // 8, 256)
 
     for start in range(0, search_len, hop):
         segment = bed[start:]
@@ -61,6 +70,24 @@ def _align_loop_bed(src: Path, vocal: np.ndarray, n: int, sr: int) -> Path:
     out = np.tile(segment, reps)[:n].astype(np.float32)
     dest = src.parent / "bed-aligned.wav"
     return write_wav(dest, out, sr)
+
+
+def _produce_catalog(
+    src: Path,
+    vocal: np.ndarray,
+    n: int,
+    sr: int,
+    bpm: float | None,
+    genre: str,
+) -> Path:
+    aligned = _align_loop_bed(src, vocal, n, sr, bpm=bpm)
+    bed, _ = load_mono(aligned, sr=sr)
+    if genre in {"pop", "trap"} and bpm and bpm >= 40:
+        sub = render_sub_layer(genre, len(bed), sr, bpm, offset=0)
+        bed = np.clip(bed.astype(np.float32) + sub * 0.55, -1.0, 1.0)
+    produced = finish_production(bed, sr, genre, vocal)
+    dest = src.parent / "bed-produced.wav"
+    return write_wav(dest, produced, sr)
 
 
 def run_job(payload: JobPayload) -> dict:
@@ -89,26 +116,43 @@ def run_job(payload: JobPayload) -> dict:
             pitched = correct_pitch(cleaned, workdir, payload.genre)
 
             report("rvc")
-            converted = enhance(pitched, workdir)
+            rvc_out, rvc_applied = rvc_convert(pitched, workdir)
+            converted = enhance(rvc_out, workdir, payload.genre, rvc_applied=rvc_applied)
 
             rhythm = analyze_rhythm(vocal, sr, payload.genre, payload.rhythm, payload.bpm)
+            report("bed")
             bed_path = workdir / "bed.wav"
-            used_catalog = False
-            # Short amateur clips fight catalog loops more than they help.
-            if (
-                rhythm.confidence < 0.35
-                and payload.instrumental_url
-                and len(vocal) >= sr * 18
-            ):
+            bed_source = "procedural"
+
+            ml_bed, ml_engine = try_generate_bed(
+                bed_path,
+                payload.genre,
+                instruments,
+                len(vocal),
+                sr,
+                rhythm.bpm,
+                vocal,
+            )
+            if ml_bed:
+                bed_path = ml_bed
+                bed_source = ml_engine or "ml"
+            elif payload.instrumental_url and not prefer_ml_on_gpu():
                 try:
                     bed_raw = download(payload.instrumental_url, workdir / "bed.bin")
                     catalog = to_wav(bed_raw, workdir / "catalog.wav")
-                    bed_path = _align_loop_bed(catalog, vocal, len(vocal), sr)
-                    used_catalog = True
+                    bed_path = _produce_catalog(
+                        catalog,
+                        vocal,
+                        len(vocal),
+                        sr,
+                        bpm=rhythm.bpm,
+                        genre=payload.genre,
+                    )
+                    bed_source = "catalog"
                 except Exception:
-                    used_catalog = False
+                    pass
 
-            if not used_catalog:
+            if bed_source == "procedural":
                 write_bed(
                     bed_path,
                     payload.genre,
@@ -117,7 +161,7 @@ def run_job(payload: JobPayload) -> dict:
                     sr,
                     bpm=rhythm.bpm,
                     offset=rhythm.offset,
-                    ambient=rhythm.ambient or rhythm.confidence < 0.35,
+                    ambient=rhythm.ambient,
                     vocal=vocal,
                 )
             time.sleep(0.05)
@@ -137,7 +181,7 @@ def run_job(payload: JobPayload) -> dict:
                 "instruments": instruments,
                 "bpm": rhythm.bpm,
                 "rhythm_confidence": rhythm.confidence,
-                "bed_source": "catalog" if used_catalog else "generated",
+                "bed_source": bed_source,
             }
         except Exception as exc:
             report("export", status="failed", extra={"error_message": str(exc)})

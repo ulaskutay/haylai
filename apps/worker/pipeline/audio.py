@@ -143,7 +143,7 @@ def to_mp3_bytes(audio: np.ndarray, sr: int) -> bytes:
                     "-codec:a",
                     "libmp3lame",
                     "-b:a",
-                    "256k",
+                    "320k",
                     str(mp3_path),
                 ],
                 check=True,

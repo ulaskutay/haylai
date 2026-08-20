@@ -10,8 +10,8 @@ from pipeline.audio import load_mono, use_gpu_models, write_wav
 def _hpss_noise_reduce(audio: np.ndarray) -> np.ndarray:
     spec = np.fft.rfft(audio)
     mag = np.abs(spec)
-    thresh = np.median(mag) * 1.35
-    spec[mag < thresh] *= 0.08
+    thresh = np.median(mag) * 1.55
+    spec[mag < thresh] *= 0.22
     out = np.fft.irfft(spec, n=len(audio)).astype(np.float32)
     return np.clip(out, -1.0, 1.0)
 
@@ -28,7 +28,7 @@ def _gate(audio: np.ndarray, sr: int) -> np.ndarray:
     envelope = np.sqrt(np.convolve(audio**2, np.ones(win) / win, mode="same") + 1e-9)
     floor = float(np.percentile(envelope[: min(len(envelope), sr // 2)], 20))
     thresh = max(floor * 3.5, 0.004)
-    gain = np.clip((envelope - thresh) / (thresh + 1e-6), 0.08, 1.0)
+    gain = np.clip((envelope - thresh) / (thresh + 1e-6), 0.18, 1.0)
     return (audio * gain).astype(np.float32)
 
 

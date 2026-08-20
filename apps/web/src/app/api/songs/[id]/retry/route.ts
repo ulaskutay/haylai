@@ -91,7 +91,7 @@ export async function POST(
     instrumentalPath: String(bed.storage_path).replace(/^instrumentals\//, ""),
     genre,
     instruments: normalizeInstruments(song.instruments, genre),
-    rhythm: "follow",
+    rhythm: "style",
     bpm: 0,
   });
 

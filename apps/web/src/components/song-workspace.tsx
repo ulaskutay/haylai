@@ -19,6 +19,7 @@ const STEPS: PipelineStep[] = [
   "cleaning",
   "pitch",
   "rvc",
+  "bed",
   "mix",
   "export",
 ];

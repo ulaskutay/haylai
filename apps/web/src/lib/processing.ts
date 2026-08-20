@@ -15,6 +15,7 @@ const STEPS: PipelineStep[] = [
   "cleaning",
   "pitch",
   "rvc",
+  "bed",
   "mix",
   "export",
 ];
@@ -88,6 +89,9 @@ async function localWorkerUp() {
 
 export async function resolveProcessMode() {
   const configured = process.env.PROCESS_MODE ?? "auto";
+  if (configured === "runpod") {
+    return isRunPodConfigured() ? "runpod" : "mock";
+  }
   if (configured === "auto") {
     if (isRunPodConfigured()) return "runpod";
     if (await localWorkerUp()) return "local";

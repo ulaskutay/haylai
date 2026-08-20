@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-STEPS = ("analyzing", "cleaning", "pitch", "rvc", "mix", "export")
+STEPS = ("analyzing", "cleaning", "pitch", "rvc", "bed", "mix", "export")
 
 
 @dataclass

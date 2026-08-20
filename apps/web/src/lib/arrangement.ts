@@ -2,11 +2,11 @@ export const STYLES = [
   {
     id: "pop",
     title: "Pop",
-    bpm: 102,
-    bpmMin: 92,
-    bpmMax: 114,
+    bpm: 92,
+    bpmMin: 86,
+    bpmMax: 98,
     key: "A minor",
-    instruments: ["drums", "bass", "keys", "synth"],
+    instruments: ["drums", "bass", "keys", "pad"],
   },
   {
     id: "trap",
