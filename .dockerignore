@@ -1,0 +1,10 @@
+.git
+**/.venv
+**/venv
+**/__pycache__
+**/.next
+**/node_modules
+data
+apps/web
+*.md
+.env*

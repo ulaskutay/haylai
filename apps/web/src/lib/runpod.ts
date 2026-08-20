@@ -1,5 +1,7 @@
 import crypto from "crypto";
 
+const RUNPOD_API = "https://api.runpod.ai/v2";
+
 export function isRunPodConfigured() {
   const key = process.env.RUNPOD_API_KEY?.trim();
   const endpoint = process.env.RUNPOD_ENDPOINT_ID?.trim();
